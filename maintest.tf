@@ -48,8 +48,13 @@ data "aws_ami" "ubuntu" {
 resource "aws_instance" "web" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = "t2.micro"
-  vpc_security_group_ids = [aws_security_group.web-sg.id]
-
+  # vpc_security_group_ids = [aws_security_group.web-sg.id]
+  security_groups        = [aws_security_group.web_sg.id]
+  ebs_block_device {
+    device_name = "/dev/sda1"
+    encrypted   = true
+    volume_size = 8
+  }
   user_data = <<-EOF
               #!/bin/bash
               apt-get update
@@ -58,10 +63,14 @@ resource "aws_instance" "web" {
               echo "Hello World" > /var/www/html/index.html
               systemctl restart apache2
               EOF
+  metadata_options {
+    http_tokens = "required"
+  }
 }
 
 resource "aws_security_group" "web-sg" {
   name = "${random_pet.sg.id}-sg"
+    description = "Allow HTTP and SSH inbound traffic"
   ingress {
     from_port   = 8080
     to_port     = 8080
